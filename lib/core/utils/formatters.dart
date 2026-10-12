@@ -14,3 +14,8 @@ String formatPercent(dynamic value) {
   if (value is num) return '${(value * 100).round()}%';
   return '-';
 }
+
+String formatDistance(double meters) {
+  if (meters < 1000) return '${meters.round()} m';
+  return '${formatNumber(meters / 1000, 1)} km';
+}

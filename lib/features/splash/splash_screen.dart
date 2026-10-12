@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../state/app_data.dart';
+import '../auth/login_screen.dart';
 import '../shell/home_shell.dart';
 import 'widgets/splash_logo_painter.dart';
 
@@ -65,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         transitionDuration: const Duration(milliseconds: 500),
         pageBuilder: (BuildContext context, Animation<double> animation,
                 Animation<double> secondaryAnimation) =>
-            const HomeShell(),
+            appData.authMode == null ? const LoginScreen() : const HomeShell(),
         transitionsBuilder: (BuildContext context, Animation<double> animation,
             Animation<double> secondaryAnimation, Widget child) {
           return FadeTransition(opacity: animation, child: child);

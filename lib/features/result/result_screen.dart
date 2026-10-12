@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/utils/formatters.dart';
@@ -16,9 +17,11 @@ import '../../data/models/measured_point.dart';
 import '../../data/models/screening_record.dart';
 import '../../state/app_data.dart';
 import '../guide/guide_screen.dart';
+import '../reference/referral_flow.dart';
 import 'utils/feature_describer.dart';
 import 'utils/overlay_parser.dart';
 import 'widgets/measurement_painter.dart';
+import 'widgets/referral_card.dart';
 import 'widgets/risk_scale.dart';
 
 class HasilScreen extends StatefulWidget {
@@ -36,6 +39,39 @@ class _HasilScreenState extends State<HasilScreen> {
   bool _showOverlay = true;
   bool _saving = false;
   bool _saved = false;
+
+    bool get _needsReferral {
+    final dynamic score = widget.result['risk_score'];
+    return score is num && score > referralThreshold;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Hasil baru dengan skor di atas 60%: langsung tawarkan alur rujukan.
+    if (widget.record == null && _needsReferral) {
+      WidgetsBinding.instance.addPostFrameCallback((Duration _) => _promptReferral());
+    }
+  }
+
+  Future<void> _promptReferral() async {
+    if (!mounted) return;
+    final bool ok = await confirmDialog(
+      context,
+      title: 'Skor risiko di atas 60%',
+      message: appData.isSignedIn
+          ? 'Sebaiknya periksakan ke dokter. Lihat rumah sakit terdekat dari lokasi Anda?'
+          : 'Sebaiknya periksakan ke dokter. Untuk melihat rumah sakit terdekat, '
+              'Anda perlu masuk ke akun dan mengisi data diri.',
+      confirmLabel: 'Lanjutkan',
+    );
+    if (!ok || !mounted) return;
+    await _openReferral();
+  }
+
+  Future<void> _openReferral() {
+    return startReferral(context, widget.result, date: widget.record?.date);
+  }
 
   Future<void> _save() async {
     if (_saved || _saving) return;
@@ -144,6 +180,10 @@ class _HasilScreenState extends State<HasilScreen> {
             ],
             const SizedBox(height: 16),
             _buildRiskCard(result),
+            if (_needsReferral) ...<Widget>[
+              const SizedBox(height: 12),
+              ReferralCard(onPressed: _openReferral),
+            ],
             ..._buildNotes(result),
             ..._buildMeasurements(result),
             const SizedBox(height: 16),
