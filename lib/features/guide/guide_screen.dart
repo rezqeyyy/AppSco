@@ -35,6 +35,7 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
   String? _cameraProblem; // terisi kalau kamera di dalam aplikasi tidak bisa dipakai
 
   // Foto yang sedang diproses
+  bool _flashReady = false;
   File? _image;
   bool _isLoading = false;
   String? _message;
@@ -116,6 +117,7 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
       } catch (_) {
         // Tidak didukung di perangkat ini: lanjut tanpa mengunci.
       }
+      final bool flashReady = await _enableFlash(fresh);
       if (!mounted) {
         await fresh.dispose();
         return;
@@ -123,6 +125,7 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
       final CameraController ready = fresh;
       setState(() {
         _controller = ready;
+        _flashReady = flashReady;
         _cameraProblem = null;
       });
     } on CameraException catch (e) {
@@ -142,6 +145,18 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
       });
     } finally {
       _startingCamera = false;
+    }
+  }
+
+    // Flash dipaksa menyala setiap memotret supaya pencahayaan foto seragam.
+  // Kamera depan umumnya tidak punya flash, jadi dianggap tidak siap.
+  Future<bool> _enableFlash(CameraController controller) async {
+    if (controller.description.lensDirection == CameraLensDirection.front) return false;
+    try {
+      await controller.setFlashMode(FlashMode.always);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -180,11 +195,21 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
       return;
     }
     if (controller.value.isTakingPicture) return;
+    if (!_flashReady) {
+      setState(() {
+        _message = _canSwitchCamera
+            ? 'Foto wajib memakai flash. Kamera ini tidak punya flash; ganti ke kamera belakang.'
+            : 'Foto wajib memakai flash, tapi flash HP ini tidak bisa dinyalakan. Pilih foto dari galeri.';
+      });
+      return;
+    }
     setState(() {
       _message = null;
       _isLoading = true;
     });
     try {
+      // Dipasang lagi tepat sebelum memotret: beberapa HP mengembalikan mode flash ke awal.
+      await controller.setFlashMode(FlashMode.always);
       final XFile shot = await controller.takePicture();
       // Foto dipotong sama dengan bingkai di layar, jadi yang dikirim = yang terlihat.
       final File file = await cropToAspect(File(shot.path), photoAspect);
@@ -381,6 +406,7 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
           children: <Widget>[
             if (preview != null) preview,
             if (image == null) const CustomPaint(painter: SilhouetteGuidePainter()),
+            if (live) _buildFlashBadge(),
             if (image == null && !live)
               Align(
                 alignment: Alignment.topCenter,
@@ -446,6 +472,33 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
     );
   }
 
+    // Penanda di pojok bingkai: flash menyala atau tidak tersedia.
+  Widget _buildFlashBadge() {
+    final bool on = _flashReady;
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: on ? const Color(0xE6FFD54F) : AppColors.amberTint,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(on ? Icons.flash_on : Icons.flash_off, size: 16, color: AppColors.ink),
+            const SizedBox(width: 4),
+            Text(
+              on ? 'Flash wajib: menyala' : 'Flash tidak tersedia',
+              style: ts(12, weight: FontWeight.w700, color: AppColors.ink, height: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
   Widget _buildCheck(String text) {
     return Container(
       constraints: const BoxConstraints(minHeight: 40),
