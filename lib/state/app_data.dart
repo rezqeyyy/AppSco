@@ -10,15 +10,18 @@ import '../data/models/screening_record.dart';
 class AppData extends ChangeNotifier {
   static const String _keyName = 'nama';
   static const String _keyHistory = 'riwayat_v1';
+  static const String _keyOnboarding = 'tutorial_selesai';
 
   bool loaded = false;
   String name = '';
+  bool onboardingDone = false; // tutorial sudah pernah diselesaikan atau dilewati
   List<ScreeningRecord> records = <ScreeningRecord>[]; // terbaru di depan
 
   Future<void> load() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       name = prefs.getString(_keyName) ?? '';
+      onboardingDone = prefs.getBool(_keyOnboarding) ?? false;
       final String? raw = prefs.getString(_keyHistory);
       if (raw != null) {
         final dynamic decoded = json.decode(raw);
@@ -60,6 +63,17 @@ class AppData extends ChangeNotifier {
       await prefs.setString(_keyName, value);
     } catch (_) {
       // Gagal menyimpan: nama tetap dipakai sampai aplikasi ditutup.
+    }
+  }
+
+  Future<void> completeOnboarding() async {
+    onboardingDone = true;
+    notifyListeners();
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyOnboarding, true);
+    } catch (_) {
+      // Gagal menyimpan: tutorial muncul lagi saat aplikasi dibuka berikutnya.
     }
   }
 

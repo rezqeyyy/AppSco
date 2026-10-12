@@ -5,11 +5,14 @@ import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/confirm_dialog.dart';
+import '../../core/widgets/icon_title.dart';
 import '../../core/widgets/section_title.dart';
 import '../../state/app_data.dart';
 
 class ProfilTab extends StatefulWidget {
-  const ProfilTab({super.key});
+  const ProfilTab({super.key, required this.onShowTutorial});
+
+  final VoidCallback onShowTutorial; // memulai tur sorotan di Beranda
 
   @override
   State<ProfilTab> createState() => _ProfilTabState();
@@ -79,6 +82,30 @@ class _ProfilTabState extends State<ProfilTab> {
                 style: primaryButtonStyle(height: 48),
                 child: const Text('Simpan nama'),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          onTap: widget.onShowTutorial,
+          child: Row(
+            children: <Widget>[
+              const IconTile(icon: Icons.school_outlined),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('Lihat tutorial lagi', style: ts(14, weight: FontWeight.w700, height: 20)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Penjelasan singkat tiap fitur aplikasi',
+                      style: ts(13, color: AppColors.muted, height: 18),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 18, color: AppColors.muted),
             ],
           ),
         ),

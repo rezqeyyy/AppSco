@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'core/theme/app_colors.dart';
-import 'features/shell/home_shell.dart';
+import 'features/splash/splash_screen.dart';
 
 class ScoliosisApp extends StatelessWidget {
   const ScoliosisApp({super.key});
@@ -21,7 +21,7 @@ class ScoliosisApp extends StatelessWidget {
         textTheme: GoogleFonts.plusJakartaSansTextTheme(base.textTheme)
             .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
       ),
-      home: const HomeShell(),
+      home: const SplashScreen(),
     );
   }
 }

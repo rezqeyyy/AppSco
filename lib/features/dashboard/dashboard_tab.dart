@@ -13,6 +13,7 @@ import '../../data/content/articles.dart';
 import '../../data/models/article.dart';
 import '../../data/models/screening_record.dart';
 import '../../state/app_data.dart';
+import '../tour/tour_keys.dart';
 import 'widgets/hero_motif_painter.dart';
 
 class BerandaTab extends StatelessWidget {
@@ -79,25 +80,30 @@ class BerandaTab extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            if (last == null)
-              AppCard(
-                child: Text(
-                  'Belum ada screening. Hasil yang disimpan akan muncul di sini.',
-                  style: ts(14, color: AppColors.muted, height: 20),
-                ),
-              )
-            else
-              _buildLastResult(context, last),
+            KeyedSubtree(
+              key: TourKeys.lastResult,
+              child: last == null
+                  ? AppCard(
+                      child: Text(
+                        'Belum ada screening. Hasil yang disimpan akan muncul di sini.',
+                        style: ts(14, color: AppColors.muted, height: 20),
+                      ),
+                    )
+                  : _buildLastResult(context, last),
+            ),
             const SizedBox(height: 24),
             const SectionTitle('Pelajari'),
             const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(child: _buildLearnCard(context, articles[0])),
-                const SizedBox(width: 12),
-                Expanded(child: _buildLearnCard(context, articles[2])),
-              ],
+            KeyedSubtree(
+              key: TourKeys.learn,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(child: _buildLearnCard(context, articles[0])),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildLearnCard(context, articles[2])),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -146,18 +152,21 @@ class BerandaTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () => openGuide(context),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.teal,
-                    minimumSize: const Size(0, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    shape: const StadiumBorder(),
-                    textStyle: ts(15, weight: FontWeight.w700),
+                KeyedSubtree(
+                  key: TourKeys.startScreening,
+                  child: FilledButton.icon(
+                    onPressed: () => openGuide(context),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.teal,
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      shape: const StadiumBorder(),
+                      textStyle: ts(15, weight: FontWeight.w700),
+                    ),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 22),
+                    label: const Text('Mulai screening'),
                   ),
-                  icon: const Icon(Icons.photo_camera_outlined, size: 22),
-                  label: const Text('Mulai screening'),
                 ),
               ],
             ),
