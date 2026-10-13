@@ -204,6 +204,6 @@ class AuthService {
           '(Supabase: Authentication > Sign In / Providers > Google > Enable)';
     }
     if (e is AuthRetryableFetchException) return _network(e.message);
-    return 'Login gagal: ${e.message}';
+    return 'Logins gagal: ${e.message}';
   }
 }

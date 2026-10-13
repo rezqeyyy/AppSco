@@ -15,6 +15,7 @@ import '../../data/content/articles.dart';
 import '../../data/models/analysis_outcome.dart';
 import '../../data/services/screening_api.dart';
 import '../result/result_screen.dart';
+import 'widgets/photo_guide_sheet.dart';
 import 'widgets/silhouette_guide_painter.dart';
 
 class PanduanScreen extends StatefulWidget {
@@ -33,9 +34,9 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
   int _cameraIndex = -1;
   bool _startingCamera = false;
   String? _cameraProblem; // terisi kalau kamera di dalam aplikasi tidak bisa dipakai
+  bool _flashReady = false; // flash wajib menyala saat memotret dari kamera aplikasi
 
   // Foto yang sedang diproses
-  bool _flashReady = false;
   File? _image;
   bool _isLoading = false;
   String? _message;
@@ -44,12 +45,26 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Layar penuh seperti kamera bawaan: status bar dan tombol navigasi disembunyikan.
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _startCamera();
+    // Panduan foto selalu muncul setiap kali kamera dibuka.
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) => _showGuide());
+  }
+
+  Future<void> _showGuide() async {
+    if (!mounted) return;
+    await showPhotoGuideSheet(
+      context,
+      onReadMore: () => openArticle(context, articles[2]),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Kembalikan status bar dan tombol navigasi seperti semula.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
     _controller?.dispose();
     super.dispose();
   }
@@ -148,7 +163,7 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
     }
   }
 
-    // Flash dipaksa menyala setiap memotret supaya pencahayaan foto seragam.
+  // Flash dipaksa menyala setiap memotret supaya pencahayaan foto seragam.
   // Kamera depan umumnya tidak punya flash, jadi dianggap tidak siap.
   Future<bool> _enableFlash(CameraController controller) async {
     if (controller.description.lensDirection == CameraLensDirection.front) return false;
@@ -271,115 +286,26 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     final String? message = _message ?? _cameraProblem;
-    return Scaffold(
-      backgroundColor: AppColors.dark,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  CircleIconButton(
-                    icon: Icons.arrow_back,
-                    label: 'Kembali',
-                    background: AppColors.darkSurface,
-                    foreground: Colors.white,
-                    bordered: false,
-                    onTap: () => Navigator.of(context).maybePop(),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Panduan foto',
-                      textAlign: TextAlign.center,
-                      style: ts(15, weight: FontWeight.w700, color: Colors.white, height: 20),
-                    ),
-                  ),
-                  CircleIconButton(
-                    icon: Icons.info_outline,
-                    label: 'Cara mengambil foto yang benar',
-                    background: AppColors.darkSurface,
-                    foreground: Colors.white,
-                    bordered: false,
-                    onTap: () => openArticle(context, articles[2]),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _cameraReady
-                    ? 'Posisikan punggung di dalam garis'
-                    : 'Posisikan punggung seperti garis ini',
-                textAlign: TextAlign.center,
-                style: ts(19, weight: FontWeight.w800, color: Colors.white, height: 26),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Minta orang lain memotret dari belakang, kamera sejajar punggung.',
-                textAlign: TextAlign.center,
-                style: ts(14, color: AppColors.darkMuted, height: 20),
-              ),
-              const SizedBox(height: 16),
+              _buildTopBar(),
+              // Bingkai foto selebar layar (3:4), seperti mode 3:4 di kamera bawaan HP.
+              // Yang terlihat di bingkai = yang dikirim ke server.
               Expanded(
                 child: Center(
-                  child: AspectRatio(aspectRatio: photoAspect, child: _buildViewfinder()),
-                ),
-              ),
-              if (message != null) ...<Widget>[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.amberTint,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: ts(13, weight: FontWeight.w600, color: AppColors.amber, height: 19),
+                  child: AspectRatio(
+                    aspectRatio: photoAspect,
+                    child: _buildViewfinder(message),
                   ),
                 ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: <Widget>[
-                  Expanded(child: _buildCheck('Berdiri tegak')),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildCheck('Tangan di samping')),
-                ],
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(child: _buildCheck('Punggung terlihat penuh')),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildCheck('Latar polos')),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    _buildSquareButton(
-                      icon: Icons.photo_library_outlined,
-                      label: 'Pilih foto dari galeri',
-                      onTap: _isLoading ? null : () => _pickFrom(ImageSource.gallery),
-                    ),
-                    _buildShutter(),
-                    if (_cameraReady && _canSwitchCamera)
-                      _buildSquareButton(
-                        icon: Icons.cameraswitch_outlined,
-                        label: 'Ganti kamera depan atau belakang',
-                        onTap: _isLoading ? null : _switchCamera,
-                      )
-                    else
-                      const SizedBox(width: 52, height: 52),
-                  ],
-                ),
-              ),
+              _buildBottomBar(),
             ],
           ),
         ),
@@ -387,8 +313,75 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
     );
   }
 
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      child: Row(
+        children: <Widget>[
+          CircleIconButton(
+            icon: Icons.close,
+            label: 'Tutup kamera',
+            background: Colors.transparent,
+            foreground: Colors.white,
+            bordered: false,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
+          Expanded(
+            child: Center(
+              child: _cameraReady ? _buildFlashBadge() : const SizedBox.shrink(),
+            ),
+          ),
+          CircleIconButton(
+            icon: Icons.info_outline,
+            label: 'Cara mengambil foto yang benar',
+            background: Colors.transparent,
+            foreground: Colors.white,
+            bordered: false,
+            onTap: _showGuide,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 12, 32, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            'Difoto orang lain dari belakang, jarak ±1 meter, HP setinggi tengah punggung.',
+            textAlign: TextAlign.center,
+            style: ts(12, color: AppColors.darkMuted, height: 17),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              _buildSquareButton(
+                icon: Icons.photo_library_outlined,
+                label: 'Pilih foto dari galeri',
+                onTap: _isLoading ? null : () => _pickFrom(ImageSource.gallery),
+              ),
+              _buildShutter(),
+              if (_cameraReady && _canSwitchCamera)
+                _buildSquareButton(
+                  icon: Icons.cameraswitch_outlined,
+                  label: 'Ganti kamera depan atau belakang',
+                  onTap: _isLoading ? null : _switchCamera,
+                )
+              else
+                const SizedBox(width: 52, height: 52),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // Bingkai foto: pratinjau kamera langsung, dengan kerangka punggung di atasnya.
-  Widget _buildViewfinder() {
+  Widget _buildViewfinder(String? message) {
     final File? image = _image;
     final CameraController? controller = _controller;
     final Widget? preview = image != null
@@ -397,59 +390,79 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
             ? _buildLivePreview(controller)
             : null);
     final bool live = image == null && preview != null;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        color: AppColors.darkSurface,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            if (preview != null) preview,
-            if (image == null) const CustomPaint(painter: SilhouetteGuidePainter()),
-            if (live) _buildFlashBadge(),
-            if (image == null && !live)
-              Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  margin: const EdgeInsets.only(top: 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.tealTint,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    _startingCamera ? 'Membuka kamera' : 'Contoh posisi',
-                    style: ts(13, weight: FontWeight.w700, color: AppColors.tealDark, height: 18),
+    return Container(
+      color: AppColors.darkSurface,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          if (preview != null) preview,
+          if (image == null) const CustomPaint(painter: SilhouetteGuidePainter()),
+          if (image == null)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: live ? const Color(0x99000000) : AppColors.tealTint,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  live
+                      ? 'Leher sampai pinggul di dalam garis · kepala tidak perlu'
+                      : (_startingCamera ? 'Membuka kamera' : 'Contoh posisi'),
+                  style: ts(
+                    12,
+                    weight: FontWeight.w700,
+                    color: live ? Colors.white : AppColors.tealDark,
+                    height: 16,
                   ),
                 ),
               ),
-            if (_isLoading)
-              Container(
-                color: const Color(0xB30C1719),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const CircularProgressIndicator(color: Colors.white),
-                    const SizedBox(height: 16),
+            ),
+          if (message != null && !_isLoading)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.amberTint,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: ts(13, weight: FontWeight.w600, color: AppColors.amber, height: 19),
+                ),
+              ),
+            ),
+          if (_isLoading)
+            Container(
+              color: const Color(0xB30C1719),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const CircularProgressIndicator(color: Colors.white),
+                  const SizedBox(height: 16),
+                  Text(
+                    image == null ? 'Mengambil foto' : 'Sedang menganalisis',
+                    textAlign: TextAlign.center,
+                    style: ts(16, weight: FontWeight.w700, color: Colors.white, height: 22),
+                  ),
+                  if (image != null) ...<Widget>[
+                    const SizedBox(height: 4),
                     Text(
-                      image == null ? 'Mengambil foto' : 'Sedang menganalisis',
+                      'Permintaan pertama bisa memakan waktu sekitar satu menit.',
                       textAlign: TextAlign.center,
-                      style: ts(16, weight: FontWeight.w700, color: Colors.white, height: 22),
+                      style: ts(13, color: AppColors.darkMuted, height: 19),
                     ),
-                    if (image != null) ...<Widget>[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Permintaan pertama bisa memakan waktu sekitar satu menit.',
-                        textAlign: TextAlign.center,
-                        style: ts(13, color: AppColors.darkMuted, height: 19),
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -472,50 +485,23 @@ class _PanduanScreenState extends State<PanduanScreen> with WidgetsBindingObserv
     );
   }
 
-    // Penanda di pojok bingkai: flash menyala atau tidak tersedia.
+  // Penanda di bagian atas: flash menyala atau tidak tersedia.
   Widget _buildFlashBadge() {
     final bool on = _flashReady;
-    return Align(
-      alignment: Alignment.topLeft,
-      child: Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: on ? const Color(0xE6FFD54F) : AppColors.amberTint,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(on ? Icons.flash_on : Icons.flash_off, size: 16, color: AppColors.ink),
-            const SizedBox(width: 4),
-            Text(
-              on ? 'Flash wajib: menyala' : 'Flash tidak tersedia',
-              style: ts(12, weight: FontWeight.w700, color: AppColors.ink, height: 16),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildCheck(String text) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 40),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(12),
+        color: on ? const Color(0xE6FFD54F) : AppColors.amberTint,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          const Icon(Icons.check, size: 18, color: AppColors.mint),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: ts(13, weight: FontWeight.w600, color: Colors.white, height: 18),
-            ),
+          Icon(on ? Icons.flash_on : Icons.flash_off, size: 16, color: AppColors.ink),
+          const SizedBox(width: 4),
+          Text(
+            on ? 'Flash wajib: menyala' : 'Flash tidak tersedia',
+            style: ts(12, weight: FontWeight.w700, color: AppColors.ink, height: 16),
           ),
         ],
       ),

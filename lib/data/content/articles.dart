@@ -38,7 +38,8 @@ const List<Article> articles = <Article>[
     body: <String>[
       'Hasil screening sangat bergantung pada fotonya. Ikuti panduan ini setiap kali mengambil foto:',
       '- Minta orang lain memotret dari belakang',
-      '- Punggung terlihat dari leher sampai pinggul, tidak tertutup baju atau rambut',
+      '- Badan dari pangkal leher sampai pinggul memenuhi bingkai; kepala tidak perlu ikut terfoto',
+      '- Jarak kamera sekitar 1 meter, HP setinggi tengah punggung',
       '- Berdiri tegak dan rileks, kedua kaki sejajar, tangan di samping badan',
       '- Kamera tegak dan sejajar punggung, tidak miring atau dari atas',
       '- Pakai latar yang polos dan cahaya yang cukup',

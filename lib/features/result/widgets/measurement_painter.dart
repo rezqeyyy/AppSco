@@ -7,11 +7,13 @@ class MeasurementPainter extends CustomPainter {
     required this.points,
     required this.pairs,
     required this.axis,
+    this.showNumbers = false,
   });
 
   final List<MeasuredPoint> points;
   final List<List<int>> pairs;
   final List<Offset> axis;
+  final bool showNumbers; // nomor titik: berguna untuk pengembang, membingungkan untuk orang awam
 
   /// Sama dengan kpt_conf di server: di bawah ini titik dianggap kurang yakin.
   static const double minConf = 0.5;
@@ -80,7 +82,7 @@ class MeasurementPainter extends CustomPainter {
       }
     }
 
-    // 3. Titik tubuh dan nomornya
+    // 3. Titik tubuh (dan nomornya kalau showNumbers)
     final Paint ring = Paint()..color = Colors.white;
     final Paint edge = Paint()
       ..color = Colors.black87
@@ -93,6 +95,7 @@ class MeasurementPainter extends CustomPainter {
       canvas.drawCircle(c, 6, ring);
       canvas.drawCircle(c, 6, edge);
       canvas.drawCircle(c, 4, fill);
+      if (!showNumbers) continue;
 
       final TextPainter label = TextPainter(
         text: TextSpan(
