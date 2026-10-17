@@ -1,0 +1,36 @@
+name: Build iOS (tanpa tanda tangan)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Ambil package
+        run: flutter pub get
+
+      - name: Naikkan target minimum iOS ke 15.5
+        run: |
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9][0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.5;/g' ios/Runner.xcodeproj/project.pbxproj
+
+      - name: Build iOS release tanpa codesign
+        run: flutter build ios --release --no-codesign
+
+      - name: Bungkus jadi .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr AppSco.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AppSco-ipa
+          path: AppSco.ipa

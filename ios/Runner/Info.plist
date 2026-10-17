@@ -32,6 +32,12 @@
 		<false/>
 		<key>UISceneConfigurations</key>
 		<dict>
+			<key>NSCameraUsageDescription</key>
+			<string>Kamera dipakai untuk memotret punggung.</string>
+			<key>NSPhotoLibraryUsageDescription</key>
+			<string>Galeri dipakai untuk memilih foto punggung.</string>
+			<key>NSLocationWhenInUseUsageDescription</key>
+			<string>Lokasi dipakai untuk mencari rumah sakit terdekat.</string>
 			<key>UIWindowSceneSessionRoleApplication</key>
 			<array>
 				<dict>
