@@ -375,7 +375,7 @@ class _HasilScreenState extends State<HasilScreen> {
           const SizedBox(height: 6),
           Text(riskHeadline(level), style: ts(16, weight: FontWeight.w700, height: 22)),
           const SizedBox(height: 14),
-          RiskScale(score: score),
+          RiskScale(score: score, level: level, thresholds: result['risk_thresholds']),
           const SizedBox(height: 12),
           Text(scoreMeaning(score), style: ts(13, color: AppColors.inkSoft, height: 19)),
         ],

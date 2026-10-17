@@ -105,24 +105,22 @@ class AppLanguage extends ChangeNotifier {
     if (targetLang == null || sourceLang == null) {
       throw const LanguageFailure('Bahasa ini belum didukung.');
     }
-    final OnDeviceTranslatorModelManager models = OnDeviceTranslatorModelManager();
-    for (final String bcp in <String>{sourceLanguageCode, target}) {
-      bool have = false;
-      try {
-        have = await models.isModelDownloaded(bcp);
-      } catch (_) {
-        have = false;
-      }
-      if (have) continue;
-      final bool ok = await models.downloadModel(bcp, isWifiRequired: false);
-      if (!ok) {
-        throw const LanguageFailure(
-          'Paket bahasa gagal diunduh. Pastikan ada koneksi internet lalu coba lagi.',
-        );
-      }
-    }
     await _closeTranslator();
-    _translator = OnDeviceTranslator(sourceLanguage: sourceLang, targetLanguage: targetLang);
+    final OnDeviceTranslator translator =
+        OnDeviceTranslator(sourceLanguage: sourceLang, targetLanguage: targetLang);
+    try {
+      // Terjemahan pertama sekaligus mengunduh paket bahasa kalau belum ada.
+      await translator.translateText('Halo').timeout(const Duration(minutes: 3));
+    } on TimeoutException {
+      await translator.close();
+      throw const LanguageFailure(
+        'Unduhan paket bahasa terlalu lama. Periksa koneksi internet lalu coba lagi.',
+      );
+    } catch (e) {
+      await translator.close();
+      throw LanguageFailure('Paket bahasa gagal disiapkan: $e');
+    }
+    _translator = translator;
     _ready = true;
     if (target == code) _scheduleFlush();
   }
