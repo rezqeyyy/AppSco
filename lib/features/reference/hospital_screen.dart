@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/tr_text.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';

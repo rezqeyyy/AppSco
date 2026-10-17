@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../i18n/tr_text.dart';
 
 Future<bool> confirmDialog(
   BuildContext context, {

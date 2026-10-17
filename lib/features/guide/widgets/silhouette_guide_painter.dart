@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_language.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/dashed_path.dart';
 
@@ -97,8 +98,8 @@ class SilhouetteGuidePainter extends CustomPainter {
     drawDashedPath(canvas, torso(size), outline, compact ? 6 : 10, compact ? 5 : 8);
 
     if (showLabels && !compact) {
-      _label(canvas, 'Bahu', Offset(w * 0.06, h * shoulderY - 18));
-      _label(canvas, 'Pinggul', Offset(w * 0.06, h * hipY + 4));
+      _label(canvas, tr('Bahu'), Offset(w * 0.06, h * shoulderY - 18));
+      _label(canvas, tr('Pinggul'), Offset(w * 0.06, h * hipY + 4));
     }
     canvas.restore();
 

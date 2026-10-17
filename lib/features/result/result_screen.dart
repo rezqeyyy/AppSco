@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/tr_text.dart';
 
 import '../../core/constants/app_config.dart';
 import '../../core/theme/app_colors.dart';
@@ -16,8 +17,8 @@ import '../../data/models/feature_info.dart';
 import '../../data/models/measured_point.dart';
 import '../../data/models/screening_record.dart';
 import '../../state/app_data.dart';
-import '../panduan/panduan_screen.dart';
-import '../rujukan/referral_flow.dart';
+import '../guide/guide_screen.dart';
+import '../reference/referral_flow.dart';
 import 'utils/feature_describer.dart';
 import 'utils/overlay_parser.dart';
 import 'utils/plain_reading.dart';

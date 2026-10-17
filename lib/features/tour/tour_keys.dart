@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 /// Penanda bagian layar yang disorot tur. Tiap kunci ditempel ke satu widget
 /// (lewat KeyedSubtree), supaya tur tahu posisi dan ukurannya di layar.

@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../core/constants/app_config.dart';
+import '../../core/i18n/tr_text.dart';
 import '../../core/navigation/app_navigation.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
@@ -15,6 +16,7 @@ import '../../data/models/screening_record.dart';
 import '../../state/app_data.dart';
 import '../tour/tour_keys.dart';
 import 'widgets/hero_motif_painter.dart';
+import 'widgets/language_sheet.dart';
 
 class BerandaTab extends StatelessWidget {
   const BerandaTab({super.key, required this.onOpenTab});
@@ -39,6 +41,7 @@ class BerandaTab extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         appName,
+                        translate: false, // nama aplikasi tidak diterjemahkan
                         style: ts(
                           13,
                           weight: FontWeight.w800,
@@ -56,7 +59,9 @@ class BerandaTab extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
+                const LanguageButton(),
+                const SizedBox(width: 8),
                 CircleIconButton(
                   icon: Icons.person_outline,
                   label: 'Buka profil',

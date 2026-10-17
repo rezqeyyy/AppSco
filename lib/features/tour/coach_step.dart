@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 /// Satu langkah tur: bagian layar yang disorot dan penjelasannya.
 class CoachStep {

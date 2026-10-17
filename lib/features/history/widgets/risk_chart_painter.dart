@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_config.dart';
+import '../../../core/i18n/app_language.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/dashed_path.dart';
@@ -51,9 +52,9 @@ class RiskChartPainter extends CustomPainter {
       dashLine.lineTo(size.width, yOf(limit));
       drawDashedPath(canvas, dashLine, threshold, 4, 5);
     }
-    _text(canvas, 'Tinggi', Offset(size.width, yOf((1 + riskMidMax) / 2) - 7), small, 1);
-    _text(canvas, 'Sedang', Offset(size.width, yOf((riskLowMax + riskMidMax) / 2) - 7), small, 1);
-    _text(canvas, 'Rendah', Offset(size.width, yOf(riskLowMax / 2) - 7), small, 1);
+    _text(canvas, tr('Tinggi'), Offset(size.width, yOf((1 + riskMidMax) / 2) - 7), small, 1);
+    _text(canvas, tr('Sedang'), Offset(size.width, yOf((riskLowMax + riskMidMax) / 2) - 7), small, 1);
+    _text(canvas, tr('Rendah'), Offset(size.width, yOf(riskLowMax / 2) - 7), small, 1);
 
     // Titik data
     final List<Offset> dots = <Offset>[];
@@ -62,7 +63,7 @@ class RiskChartPainter extends CustomPainter {
       final double x = records.length == 1
           ? (chartLeft + chartRight) / 2
           : chartLeft + (chartRight - chartLeft) * i / (records.length - 1);
-      _text(canvas, formatDayMonth(records[i].date), Offset(x, chartBottom + 6), small, 0.5);
+      _text(canvas, tr(formatDayMonth(records[i].date)), Offset(x, chartBottom + 6), small, 0.5);
       final double? score = records[i].riskScore;
       if (score == null) continue;
       dots.add(Offset(x, yOf(score)));

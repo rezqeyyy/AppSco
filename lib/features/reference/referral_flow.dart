@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../state/app_data.dart';
 import '../auth/login_screen.dart';

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
+import '../../../core/i18n/tr_text.dart';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 /// Menggelapkan seluruh layar kecuali [hole], menggambar cincin berdenyut di
 /// sekeliling bagian yang disorot, dan panah dari kartu penjelasan ke bagian itu.

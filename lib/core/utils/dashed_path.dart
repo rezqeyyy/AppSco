@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 void drawDashedPath(Canvas canvas, Path path, Paint paint, double dash, double gap) {
   for (final metric in path.computeMetrics()) {

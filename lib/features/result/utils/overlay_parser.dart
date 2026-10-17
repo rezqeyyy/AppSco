@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../../data/models/measured_point.dart';
 

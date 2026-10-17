@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../data/models/article.dart';
 import '../../data/models/screening_record.dart';

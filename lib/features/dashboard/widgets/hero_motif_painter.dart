@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../../../core/utils/dashed_path.dart';
+import '../../../core/i18n/tr_text.dart';
 
 /// Hiasan di kartu "Screening baru": sumbu tubuh putus-putus dan tiga garis kiri-kanan.
 class HeroMotifPainter extends CustomPainter {

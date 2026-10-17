@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/tr_text.dart';
 
 import '../../state/app_data.dart';
 import '../dashboard/dashboard_tab.dart';

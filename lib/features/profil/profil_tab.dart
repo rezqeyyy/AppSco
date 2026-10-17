@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
+import '../../core/i18n/tr_text.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/app_card.dart';
@@ -113,13 +114,15 @@ class _ProfilTabState extends State<ProfilTab> {
                   account == null
                       ? 'Tamu'
                       : (account.name.isEmpty ? account.email : account.name),
+                  translate: account == null, // nama akun tidak diterjemahkan
                   style: ts(15, weight: FontWeight.w700, height: 20),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   account == null
-                    ? 'Belum masuk ke akun'
-                    : (account.isGoogle ? '${account.email} · Google' : account.email),
+                      ? 'Belum masuk ke akun'
+                      : (account.isGoogle ? '${account.email} · Google' : account.email),
+                  translate: account == null, // email tidak diterjemahkan
                   style: ts(13, color: AppColors.muted, height: 18),
                 ),
               ],
@@ -160,12 +163,18 @@ class _ProfilTabState extends State<ProfilTab> {
               children: <Widget>[
                 Text('Data diri', style: ts(14, weight: FontWeight.w700, height: 20)),
                 const SizedBox(height: 2),
-                Text(
-                  p == null
-                      ? 'Belum diisi. Dipakai untuk ringkasan ke dokter.'
-                      : '${p.fullName} · ${p.age} tahun · ${p.gender}',
-                  style: ts(13, color: AppColors.muted, height: 18),
-                ),
+                if (p == null)
+                  Text(
+                    'Belum diisi. Dipakai untuk ringkasan ke dokter.',
+                    style: ts(13, color: AppColors.muted, height: 18),
+                  )
+                else
+                  // Nama tidak diterjemahkan; umur dan jenis kelamin diterjemahkan.
+                  Text(
+                    '${p.fullName} · ${tr('${p.age} tahun')} · ${tr(p.gender)}',
+                    translate: false,
+                    style: ts(13, color: AppColors.muted, height: 18),
+                  ),
               ],
             ),
           ),
@@ -204,10 +213,10 @@ class _ProfilTabState extends State<ProfilTab> {
                 textCapitalization: TextCapitalization.words,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (String value) => _saveName(),
-                decoration: const InputDecoration(
-                  labelText: 'Nama',
-                  hintText: 'Nama yang tampil di beranda',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: tr('Nama'),
+                  hintText: tr('Nama yang tampil di beranda'),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),

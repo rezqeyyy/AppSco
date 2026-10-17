@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
+import '../../core/i18n/tr_text.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/utils/formatters.dart';
@@ -27,6 +28,8 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
   bool _showMissing = false; // tanggal lahir / jenis kelamin belum diisi saat menekan simpan
   bool _saving = false;
 
+  // Nilai ini yang disimpan ke database, jadi tetap Bahasa Indonesia.
+  // Yang diterjemahkan hanya tulisan di layar.
   static const List<String> _genders = <String>['Laki-laki', 'Perempuan'];
 
   @override
@@ -56,9 +59,9 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
       initialDate: _birthDate ?? DateTime(now.year - 15, now.month, now.day),
       firstDate: DateTime(now.year - 100),
       lastDate: now,
-      helpText: 'Tanggal lahir',
-      cancelText: 'Batal',
-      confirmText: 'Pilih',
+      helpText: tr('Tanggal lahir'),
+      cancelText: tr('Batal'),
+      confirmText: tr('Pilih'),
     );
     if (picked == null) return;
     setState(() {
@@ -137,14 +140,14 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Nama lengkap',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: tr('Nama lengkap'),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.white,
                 ),
                 validator: (String? value) {
-                  if (value == null || value.trim().length < 2) return 'Isi nama lengkap.';
+                  if (value == null || value.trim().length < 2) return tr('Isi nama lengkap.');
                   return null;
                 },
               ),
@@ -154,12 +157,12 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
                 borderRadius: BorderRadius.circular(4),
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Tanggal lahir',
+                    labelText: tr('Tanggal lahir'),
                     border: const OutlineInputBorder(),
                     filled: true,
                     fillColor: Colors.white,
                     suffixIcon: const Icon(Icons.calendar_today_outlined, size: 20),
-                    errorText: _showMissing && birth == null ? 'Pilih tanggal lahir.' : null,
+                    errorText: _showMissing && birth == null ? tr('Pilih tanggal lahir.') : null,
                   ),
                   child: Text(
                     birth == null ? 'Pilih tanggal' : formatDate(birth),
@@ -205,9 +208,9 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'No. HP (tidak wajib)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: tr('No. HP (tidak wajib)'),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.white,
                 ),
@@ -226,7 +229,7 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                          'Data diri disimpan di akun Anda dan hanya bisa dibaca oleh Anda sendiri.',
+                        'Data diri disimpan di akun Anda dan hanya bisa dibaca oleh Anda sendiri.',
                         style: ts(13, color: AppColors.inkSoft, height: 19),
                       ),
                     ),

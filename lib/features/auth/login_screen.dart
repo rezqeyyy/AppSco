@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
+import '../../core/i18n/tr_text.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
@@ -142,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   InputDecoration _decoration(String label, {Widget? suffix}) {
     return InputDecoration(
-      labelText: label,
+      labelText: tr(label),
       border: const OutlineInputBorder(),
       filled: true,
       fillColor: Colors.white,
@@ -169,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       : Align(
                           alignment: Alignment.centerLeft,
                           child: IconButton(
-                            tooltip: 'Kembali',
+                            tooltip: tr('Kembali'),
                             onPressed: _busy ? null : () => Navigator.of(context).pop(false),
                             icon: const Icon(Icons.arrow_back),
                           ),
@@ -255,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: _decoration(
                     'Password',
                     suffix: IconButton(
-                      tooltip: _hidePassword ? 'Tampilkan password' : 'Sembunyikan password',
+                      tooltip: _hidePassword ? tr('Tampilkan password') : tr('Sembunyikan password'),
                       onPressed: () {
                         setState(() {
                           _hidePassword = !_hidePassword;

@@ -1,7 +1,8 @@
 import 'dart:io';
+import '../../core/i18n/tr_text.dart';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 

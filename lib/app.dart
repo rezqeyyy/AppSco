@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:google_fonts/google_fonts.dart';
 
+import 'core/i18n/tr_text.dart' show LanguageScope;
 import 'core/theme/app_colors.dart';
 import 'features/splash/splash_screen.dart';
 
@@ -14,14 +15,18 @@ class ScoliosisApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(seedColor: AppColors.teal, primary: AppColors.teal),
       scaffoldBackgroundColor: AppColors.ground,
     );
-    return MaterialApp(
-      title: 'SkolioCek',
-      debugShowCheckedModeBanner: false,
-      theme: base.copyWith(
-        textTheme: GoogleFonts.plusJakartaSansTextTheme(base.textTheme)
-            .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
+    // LanguageScope membangun ulang semua layar saat bahasa diganti
+    // atau terjemahan baru selesai, jadi teksnya ikut berubah.
+    return LanguageScope(
+      child: MaterialApp(
+        title: 'SkolioCek',
+        debugShowCheckedModeBanner: false,
+        theme: base.copyWith(
+          textTheme: GoogleFonts.plusJakartaSansTextTheme(base.textTheme)
+              .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
+        ),
+        home: const SplashScreen(),
       ),
-      home: const SplashScreen(),
     );
   }
 }

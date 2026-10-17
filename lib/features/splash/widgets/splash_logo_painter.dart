@@ -1,6 +1,7 @@
 import 'dart:math' as math;
+import '../../../core/i18n/tr_text.dart';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 /// Logo yang sama dengan ikon aplikasi, digambar bertahap sesuai [progress] (0-1):
 /// sumbu tubuh muncul dari atas ke bawah, lalu tiga garis kiri-kanan memanjang

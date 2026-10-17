@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 /// Satu titik tubuh dari server. [pos] berupa pecahan 0-1 dari lebar dan tinggi foto.
 class MeasuredPoint {

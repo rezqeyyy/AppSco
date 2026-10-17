@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 class AppColors {
   static const Color ground = Color(0xFFF3F6F5);
