@@ -120,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         child: Transform.translate(
                           offset: Offset(0, 16 * (1 - titleT)),
                           child: Text(
-                            'SkolioCek',
+                            'AppSco',
                             textAlign: TextAlign.center,
                             style: ts(34, weight: FontWeight.w800, color: Colors.white, height: 40),
                           ),

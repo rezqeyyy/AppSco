@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart' hide Text;
-import '../../core/i18n/tr_text.dart';
 
+import '../../core/i18n/tr_text.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/buttons.dart';
+import 'ansco.dart';
 import 'coach_step.dart';
 import 'widgets/spotlight_painter.dart';
 
-/// Tur sorotan: layar digelapkan kecuali bagian yang sedang dijelaskan,
-/// lalu ada panah dan kartu penjelasan. Ketuk di mana saja untuk lanjut.
+/// Tur sorotan bersama maskot AnSco.
+///
+/// Urutannya: perkenalan AnSco → tiap bagian layar disorot dan dijelaskan AnSco
+/// (pose tangannya menunjuk ke arah bagian yang disorot) → penutup.
 class CoachMarkTour extends StatefulWidget {
   const CoachMarkTour({super.key, required this.steps, required this.onFinish});
 
@@ -21,17 +24,22 @@ class CoachMarkTour extends StatefulWidget {
 
 class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateMixin {
   static const double _gap = 64; // ruang untuk panah antara sorotan dan kartu
+  static const double _mascotHeight = 132; // tinggi AnSco di samping kartu langkah
 
   late final AnimationController _pulse;
   late final AnimationController _move;
   late final AnimationController _fade;
 
-  int _index = 0;
+  // -1 = perkenalan, 0..n-1 = langkah tur, n = penutup.
+  int _index = -1;
   Rect? _from; // posisi sorotan sebelum pindah ke langkah berikutnya
   Rect? _last; // posisi sorotan yang terakhir digambar
   bool _closing = false;
+  bool _precached = false;
 
-  CoachStep get _step => widget.steps[_index];
+  bool get _isIntro => _index < 0;
+  bool get _isOutro => _index >= widget.steps.length;
+  CoachStep? get _step => (_isIntro || _isOutro) ? null : widget.steps[_index];
 
   @override
   void initState() {
@@ -41,7 +49,15 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
     _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
     _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 250))
       ..forward();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_precached) {
+      _precached = true;
+      precacheAnSco(context);
+    }
   }
 
   @override
@@ -54,7 +70,7 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
 
   // Gulir layar kalau bagian yang disorot belum terlihat.
   void _reveal() {
-    final BuildContext? target = _step.target.currentContext;
+    final BuildContext? target = _step?.target.currentContext;
     if (target != null) {
       Scrollable.ensureVisible(
         target,
@@ -66,8 +82,8 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
   }
 
   void _goTo(int index) {
-    if (_closing || index < 0) return;
-    if (index >= widget.steps.length) {
+    if (_closing || index < -1) return;
+    if (index > widget.steps.length) {
       _finish();
       return;
     }
@@ -88,12 +104,14 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
 
   // Posisi bagian yang disorot, relatif terhadap layar tur ini.
   Rect? _targetRect() {
-    final RenderObject? target = _step.target.currentContext?.findRenderObject();
+    final CoachStep? step = _step;
+    if (step == null) return null;
+    final RenderObject? target = step.target.currentContext?.findRenderObject();
     final RenderObject? self = context.findRenderObject();
     if (target is! RenderBox || self is! RenderBox) return null;
     if (!target.attached || !target.hasSize || !self.hasSize) return null;
-    final Offset topLeft = target.localToGlobal(Offset.zero, ancestor: self);
-    return (topLeft & target.size).inflate(_step.padding);
+    final Offset topLeft = target.localToGlobal(Offset.zero) - self.localToGlobal(Offset.zero);
+    return (topLeft & target.size).inflate(step.padding);
   }
 
   @override
@@ -108,9 +126,7 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
           if (hole != null && from != null && _move.isAnimating) {
             hole = Rect.lerp(from, hole, Curves.easeInOutCubic.transform(_move.value));
           }
-          if (hole != null) {
-            _last = hole;
-          }
+          _last = hole;
           return LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               return Opacity(
@@ -127,6 +143,7 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
   Widget _buildLayer(Rect? hole, Size size) {
     final double topInset = MediaQuery.of(context).padding.top;
     final bool cardAbove = hole != null && hole.center.dy > size.height * 0.5;
+    final CoachStep? step = _step;
     return Stack(
       children: <Widget>[
         Positioned.fill(
@@ -136,7 +153,7 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
             child: CustomPaint(
               painter: SpotlightPainter(
                 hole: hole,
-                radius: _step.radius + _step.padding,
+                radius: step == null ? 0 : step.radius + step.padding,
                 pulse: _pulse.value,
                 cardAbove: cardAbove,
                 gap: _gap,
@@ -144,66 +161,84 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
             ),
           ),
         ),
-        if (hole != null)
+        if (_isIntro)
+          Center(child: _buildSpeech(intro: true))
+        else if (_isOutro)
+          Center(child: _buildSpeech(intro: false))
+        else if (hole != null)
           Positioned(
-            left: 20,
-            right: 20,
+            left: 16,
+            right: 12,
             top: cardAbove ? null : hole.bottom + _gap,
             bottom: cardAbove ? size.height - hole.top + _gap : null,
-            child: _buildCard(),
+            child: _buildStepRow(cardAbove ? AnScoPose.bawah : AnScoPose.atas),
           )
         else
-          Center(
-            child: Padding(padding: const EdgeInsets.all(20), child: _buildCard()),
+          Positioned(left: 16, right: 12, top: 0, bottom: 0, child: Center(child: _buildStepRow(AnScoPose.diam))),
+        if (!_isOutro)
+          Positioned(
+            top: topInset + 8,
+            right: 12,
+            child: TextButton(
+              onPressed: _finish,
+              child: Text('Lewati', style: ts(14, weight: FontWeight.w700, color: Colors.white)),
+            ),
           ),
-        Positioned(
-          top: topInset + 8,
-          right: 12,
-          child: TextButton(
-            onPressed: _finish,
-            child: Text('Lewati', style: ts(14, weight: FontWeight.w700, color: Colors.white)),
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildCard() {
+  // Kartu penjelasan langkah + AnSco berdiri di sebelah kanannya.
+  Widget _buildStepRow(AnScoPose pose) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        Expanded(child: _buildStepCard()),
+        const SizedBox(width: 4),
+        AnScoFigure(pose: pose, height: _mascotHeight, bob: _pulse.value),
+      ],
+    );
+  }
+
+  Widget _buildStepCard() {
+    final CoachStep step = _step!;
     final int total = widget.steps.length;
-    final bool isLast = _index == total - 1;
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(20),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              '${_index + 1} dari $total',
-              style: ts(12, weight: FontWeight.w700, color: AppColors.teal, height: 16),
-            ),
-            const SizedBox(height: 4),
-            Text(_step.title, style: ts(18, weight: FontWeight.w800, height: 24)),
-            const SizedBox(height: 6),
-            Text(_step.body, style: ts(14, color: AppColors.inkSoft, height: 21)),
-            const SizedBox(height: 8),
             Row(
               children: <Widget>[
-                if (_index > 0)
-                  TextButton(
-                    onPressed: () => _goTo(_index - 1),
-                    child: Text(
-                      'Kembali',
-                      style: ts(14, weight: FontWeight.w700, color: AppColors.muted),
-                    ),
-                  ),
+                Text('AnSco', translate: false, style: ts(12, weight: FontWeight.w800, color: AppColors.teal, height: 16)),
+                Text(
+                  '  ·  ${_index + 1}/$total',
+                  translate: false,
+                  style: ts(12, weight: FontWeight.w600, color: AppColors.muted, height: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(step.title, style: ts(17, weight: FontWeight.w800, height: 22)),
+            const SizedBox(height: 4),
+            Text(step.body, style: ts(13.5, color: AppColors.inkSoft, height: 20)),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                TextButton(
+                  onPressed: () => _goTo(_index - 1),
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  child: Text('Kembali', style: ts(14, weight: FontWeight.w700, color: AppColors.muted)),
+                ),
                 const Spacer(),
                 FilledButton(
                   onPressed: () => _goTo(_index + 1),
-                  style: primaryButtonStyle(height: 44, fullWidth: false),
-                  child: Text(isLast ? 'Selesai' : 'Lanjut'),
+                  style: primaryButtonStyle(height: 42, fullWidth: false),
+                  child: const Text('Lanjut'),
                 ),
               ],
             ),
@@ -212,4 +247,110 @@ class _CoachMarkTourState extends State<CoachMarkTour> with TickerProviderStateM
       ),
     );
   }
+
+  // Perkenalan dan penutup: AnSco besar di tengah dengan balon kata di bawahnya.
+  Widget _buildSpeech({required bool intro}) {
+    final String title = intro ? 'Hai, aku AnSco!' : 'Sudah siap!';
+    final String body = intro
+        ? 'Aku yang akan menemanimu mengecek postur punggung. '
+            'Yuk, aku tunjukkan dulu cara memakai aplikasi ini. Cuma sebentar kok.'
+                : 'Sekarang kamu sudah tahu semuanya. Coba screening pertamamu, '
+                  'dan kalau bingung, ketuk kepalaku untuk tanya apa saja. Tur ini juga bisa dibuka lagi dari Profil.';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            AnScoFigure(
+              pose: intro ? AnScoPose.lambai : AnScoPose.tunjuk,
+              height: 240,
+              bob: _pulse.value,
+            ),
+            const SizedBox(height: 4),
+            // Ekor kecil balon kata yang mengarah ke AnSco.
+            CustomPaint(size: const Size(22, 11), painter: _BubbleTailPainter()),
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: ts(20, weight: FontWeight.w800, height: 26),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      body,
+                      textAlign: TextAlign.center,
+                      style: ts(14, color: AppColors.inkSoft, height: 21),
+                    ),
+                    const SizedBox(height: 14),
+                    if (intro)
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextButton(
+                              onPressed: _finish,
+                              child: Text('Nanti saja', style: ts(14, weight: FontWeight.w700, color: AppColors.muted)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () => _goTo(0),
+                              style: primaryButtonStyle(height: 46),
+                              child: const Text('Ayo mulai'),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => _goTo(_index - 1),
+                              child: Text('Kembali', style: ts(14, weight: FontWeight.w700, color: AppColors.muted)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _finish,
+                              style: primaryButtonStyle(height: 46),
+                              child: const Text('Selesai'),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BubbleTailPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Path p = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(p, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -26,3 +26,5 @@ const String supabaseUrl = 'https://icgnaxpalspfgxizbdwy.supabase.co';
 // Publishable key (sb_publishable_...) atau anon key lama. Boleh ada di aplikasi
 // karena data dilindungi Row Level Security. JANGAN isi dengan secret / service_role key.
 const String supabasePublishableKey = 'sb_publishable_bikSbyyfd35hK3h59xbdFA_nT8ZdLms';
+
+const String chatUrl = 'https://backendscoli.onrender.com/api/v1/chat';

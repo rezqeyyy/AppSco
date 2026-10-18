@@ -1,5 +1,6 @@
 import 'coach_step.dart';
 import 'tour_keys.dart';
+import '../chat/floating_ansco.dart';
 
 /// Urutan tur di Beranda.
 final List<CoachStep> homeTourSteps = <CoachStep>[
@@ -39,5 +40,13 @@ final List<CoachStep> homeTourSteps = <CoachStep>[
     radius: 12,
     title: 'Profil',
     body: 'Ubah nama, hapus riwayat, atau buka tur ini lagi kapan saja.',
+  ),
+    CoachStep(
+    target: anscoHeadKey,
+    padding: 6,
+    radius: 32,
+    title: 'Tanya AnSco',
+    body: 'Ini kepalaku! Ketuk kapan saja untuk ngobrol denganku: tanya hasil screening-mu, '
+        'soal skoliosis, atau cara pakai aplikasi. Kepalaku juga bisa kamu geser ke pinggir mana pun.',
   ),
 ];

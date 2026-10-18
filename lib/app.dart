@@ -5,6 +5,8 @@ import 'core/i18n/tr_text.dart' show LanguageScope;
 import 'core/theme/app_colors.dart';
 import 'features/splash/splash_screen.dart';
 
+import 'features/chat/floating_ansco.dart';
+
 class ScoliosisApp extends StatelessWidget {
   const ScoliosisApp({super.key});
 
@@ -32,6 +34,14 @@ class ScoliosisApp extends StatelessWidget {
       child: MaterialApp(
         title: 'AppSco',
         debugShowCheckedModeBanner: false,
+        navigatorKey: rootNavigatorKey,
+        // Kepala AnSco mengambang di atas semua halaman.
+        builder: (BuildContext context, Widget? child) => Stack(
+          children: <Widget>[
+            if (child != null) child,
+            const FloatingAnSco(),
+          ],
+        ),
         theme: base.copyWith(
           textTheme: text,
           splashFactory: InkSparkle.splashFactory,

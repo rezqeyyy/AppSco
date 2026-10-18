@@ -331,6 +331,7 @@ class BerandaTab extends StatelessWidget {
   Widget _statTile(IconData icon, String value, String label, Color color, Color tint) {
     return AppCard(
       padding: const EdgeInsets.all(14),
+      onTap: () => onOpenTab(1),
       child: Row(
         children: <Widget>[
           Container(
