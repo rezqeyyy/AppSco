@@ -32,11 +32,21 @@ class LocationService {
         openSettings: true,
       );
     }
+    // Lokasi terakhir yang masih baru (< 10 menit) langsung dipakai: untuk mencari rumah sakit
+    // dalam radius puluhan km, akurasi beberapa ratus meter sudah cukup.
+    try {
+      final Position? last = await Geolocator.getLastKnownPosition();
+      if (last != null && DateTime.now().difference(last.timestamp).inMinutes < 10) {
+        return last;
+      }
+    } catch (_) {
+      // Tidak ada lokasi tersimpan: lanjut minta lokasi baru.
+    }
     try {
       return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 20),
+          accuracy: LocationAccuracy.medium, // lebih cepat dari high, cukup untuk cari rumah sakit
+          timeLimit: Duration(seconds: 12),
         ),
       );
     } on TimeoutException {

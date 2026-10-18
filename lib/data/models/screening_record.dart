@@ -4,12 +4,16 @@ class ScreeningRecord {
     required this.date,
     required this.imagePath,
     required this.result,
+    this.ownerId,
+    this.synced = false,
   });
 
-  final String id;
+  final String id; // juga dipakai sebagai client_id di Supabase
   final DateTime date;
-  final String imagePath;
+  String imagePath; // lokasi foto di HP (bisa diisi belakangan saat foto diunduh dari akun)
   final Map<String, dynamic> result;
+  String? ownerId; // id akun pemilik; null = dibuat sebagai tamu
+  bool synced; // sudah tersimpan di database akun
 
   double? get riskScore {
     final dynamic v = result['risk_score'];
@@ -24,6 +28,8 @@ class ScreeningRecord {
       'date': date.toIso8601String(),
       'image': imagePath,
       'result': result,
+      'owner': ownerId,
+      'synced': synced,
     };
   }
 
@@ -41,6 +47,8 @@ class ScreeningRecord {
       date: date,
       imagePath: raw['image']?.toString() ?? '',
       result: resultMap,
+      ownerId: raw['owner']?.toString(),
+      synced: raw['synced'] == true,
     );
   }
 }

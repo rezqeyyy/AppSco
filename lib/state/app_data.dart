@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/material.dart' hide Text;
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,6 +30,9 @@ class AppData extends ChangeNotifier {
   String? authMode;
   UserAccount? account; // akun Supabase yang sedang masuk
   PersonalData? personal;
+
+  bool syncing = false; // riwayat sedang disamakan dengan database akun
+  bool _syncAgain = false;
 
   bool get isSignedIn => account != null;
 
@@ -67,6 +72,7 @@ class AppData extends ChangeNotifier {
     }
     loaded = true;
     notifyListeners();
+    if (account != null) unawaited(syncHistory());
   }
 
   static dynamic _decode(String? raw) {
@@ -97,7 +103,7 @@ class AppData extends ChangeNotifier {
     await _saveString(_keyAuthMode, 'guest');
   }
 
-  /// Dipanggil setelah login/daftar berhasil. Data diri diambil dari server.
+  /// Dipanggil setelah login/daftar berhasil. Data diri dan riwayat diambil dari server.
   Future<void> onSignedIn(UserAccount value) async {
     authMode = 'user';
     account = value;
@@ -109,6 +115,7 @@ class AppData extends ChangeNotifier {
     await _saveString(_keyAuthMode, 'user');
     await _saveString(_keyPersonal, null);
     await refreshPersonalData();
+    unawaited(syncHistory());
   }
 
   /// Ambil data diri terbaru dari Supabase. Kalau offline, pakai salinan di HP.
@@ -126,13 +133,24 @@ class AppData extends ChangeNotifier {
     }
   }
 
-  /// Keluar dari akun. Salinan data diri di HP dihapus; data di server tetap ada.
+  /// Keluar dari akun. Riwayat milik akun dihapus dari HP (tetap aman di database akun);
+  /// riwayat yang dibuat sebagai tamu tetap ada.
   Future<void> signOut() async {
+    final String? oldId = account?.id;
     await AuthService.instance.signOut();
     authMode = 'guest';
     account = null;
     personal = null;
+    if (oldId != null) {
+      final List<ScreeningRecord> mine =
+          records.where((ScreeningRecord r) => r.ownerId == oldId && r.synced).toList();
+      records = records.where((ScreeningRecord r) => !mine.contains(r)).toList();
+      for (final ScreeningRecord r in mine) {
+        await _deleteImage(r);
+      }
+    }
     notifyListeners();
+    await _saveHistory();
     await _saveString(_keyAuthMode, 'guest');
     await _saveString(_keyPersonal, null);
   }
@@ -184,36 +202,118 @@ class AppData extends ChangeNotifier {
     }
   }
 
-  /// Menyalin foto ke folder aplikasi (supaya tidak hilang saat cache dibersihkan)
-  /// lalu mencatat hasilnya di riwayat.
+  /// Menyalin foto ke folder aplikasi (supaya tidak hilang saat cache dibersihkan),
+  /// mencatat hasilnya di riwayat, lalu mengunggahnya ke akun di belakang layar.
   Future<ScreeningRecord> addRecord(File image, Map<String, dynamic> result) async {
     final DateTime now = DateTime.now();
     final String id = now.millisecondsSinceEpoch.toString();
     String path = image.path;
     try {
       final Directory dir = await getApplicationDocumentsDirectory();
-      final int dot = image.path.lastIndexOf('.');
-      final String ext =
-          (dot >= 0 && image.path.length - dot <= 6) ? image.path.substring(dot) : '.jpg';
-      final File copy = await image.copy('${dir.path}/screening_$id$ext');
+      final File copy = await image.copy('${dir.path}/screening_$id.jpg');
       path = copy.path;
     } catch (_) {
       // Tidak bisa menyalin: pakai lokasi foto aslinya.
     }
-    final ScreeningRecord record =
-        ScreeningRecord(id: id, date: now, imagePath: path, result: result);
+    final ScreeningRecord record = ScreeningRecord(
+      id: id,
+      date: now,
+      imagePath: path,
+      result: result,
+      ownerId: account?.id,
+    );
     records.insert(0, record);
     notifyListeners();
     await _saveHistory();
-    final UserAccount? current = account;
-    if (current != null) {
-      // Ringkasan hasil (tanpa foto) ikut disimpan ke akun.
-      await ScreeningCloud.upload(current.id, result, now);
-    }
+    if (account != null) unawaited(syncHistory()); // tidak membuat layar menunggu
     return record;
   }
 
+  /// Samakan riwayat di HP dengan database akun:
+  /// 1) unggah hasil yang belum tersimpan (termasuk hasil saat masih tamu),
+  /// 2) ambil hasil dari HP lain / install sebelumnya beserta fotonya.
+  /// Gagal (offline) tidak apa-apa: dicoba lagi saat aplikasi dibuka atau hasil baru disimpan.
+  Future<void> syncHistory() async {
+    final UserAccount? current = account;
+    if (current == null) return;
+    if (syncing) {
+      _syncAgain = true;
+      return;
+    }
+    syncing = true;
+    notifyListeners();
+    try {
+      // 1) Unggah yang belum tersimpan.
+      for (final ScreeningRecord r in List<ScreeningRecord>.of(records)) {
+        if (r.synced) continue;
+        if (r.ownerId != null && r.ownerId != current.id) continue; // milik akun lain
+        try {
+          await ScreeningCloud.upsert(current.id, r);
+          r.ownerId = current.id;
+          r.synced = true;
+        } catch (_) {
+          // Coba lagi lain kali.
+        }
+      }
+      await _saveHistory();
+
+      // 2) Ambil dari database.
+      final List<CloudScreening> remote = await ScreeningCloud.fetchAll(current.id);
+      if (account?.id != current.id) return; // sudah ganti akun
+      final Set<String> have = records.map((ScreeningRecord r) => r.id).toSet();
+      final List<ScreeningRecord> added = <ScreeningRecord>[];
+      for (final CloudScreening c in remote) {
+        if (have.contains(c.clientId)) continue;
+        added.add(ScreeningRecord(
+          id: c.clientId,
+          date: c.date,
+          imagePath: '',
+          result: c.result,
+          ownerId: current.id,
+          synced: true,
+        ));
+      }
+      if (added.isNotEmpty) {
+        records = <ScreeningRecord>[...records, ...added]
+          ..sort((ScreeningRecord a, ScreeningRecord b) => b.date.compareTo(a.date));
+        notifyListeners();
+        await _saveHistory();
+      }
+
+      // 3) Unduh foto yang belum ada di HP (yang terbaru dulu).
+      final Map<String, String?> photoOf = <String, String?>{
+        for (final CloudScreening c in remote) c.clientId: c.photoPath,
+      };
+      final Directory dir = await getApplicationDocumentsDirectory();
+      for (final ScreeningRecord r in records) {
+        if (r.ownerId != current.id || r.imagePath.isNotEmpty) continue;
+        final String? photoPath = photoOf[r.id];
+        if (photoPath == null || photoPath.isEmpty) continue;
+        try {
+          final Uint8List bytes = await ScreeningCloud.downloadPhoto(photoPath);
+          final File file = File('${dir.path}/screening_${r.id}.jpg');
+          await file.writeAsBytes(bytes, flush: true);
+          r.imagePath = file.path;
+          notifyListeners();
+        } catch (_) {
+          // Foto gagal diunduh: hasil tetap tampil tanpa foto, dicoba lagi lain kali.
+        }
+      }
+      await _saveHistory();
+    } catch (_) {
+      // Offline atau server bermasalah: riwayat di HP tetap dipakai.
+    } finally {
+      syncing = false;
+      notifyListeners();
+    }
+    if (_syncAgain) {
+      _syncAgain = false;
+      unawaited(syncHistory());
+    }
+  }
+
   Future<void> _deleteImage(ScreeningRecord record) async {
+    if (record.imagePath.isEmpty) return;
     try {
       final File file = File(record.imagePath);
       if (await file.exists()) await file.delete();
@@ -222,13 +322,23 @@ class AppData extends ChangeNotifier {
     }
   }
 
+  /// Hapus satu hasil dari HP dan (kalau sudah tersimpan) dari akun.
   Future<void> deleteRecord(ScreeningRecord record) async {
     records.remove(record);
     notifyListeners();
     await _deleteImage(record);
     await _saveHistory();
+    final UserAccount? current = account;
+    if (current != null && record.synced && record.ownerId == current.id) {
+      try {
+        await ScreeningCloud.delete(current.id, record.id);
+      } catch (_) {
+        // Offline: baris di server tetap ada dan akan muncul lagi saat sinkron berikutnya.
+      }
+    }
   }
 
+  /// Hapus semua riwayat di HP, dan semua riwayat di akun kalau sedang masuk.
   Future<void> clearAll() async {
     final List<ScreeningRecord> old = records;
     records = <ScreeningRecord>[];
@@ -237,6 +347,14 @@ class AppData extends ChangeNotifier {
       await _deleteImage(record);
     }
     await _saveHistory();
+    final UserAccount? current = account;
+    if (current != null) {
+      try {
+        await ScreeningCloud.deleteAll(current.id);
+      } catch (_) {
+        // Offline: data di server tetap ada.
+      }
+    }
   }
 }
 
