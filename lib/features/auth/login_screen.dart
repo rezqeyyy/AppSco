@@ -144,7 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
   InputDecoration _decoration(String label, {Widget? suffix}) {
     return InputDecoration(
       labelText: tr(label),
-      border: const OutlineInputBorder(),
       filled: true,
       fillColor: Colors.white,
       suffixIcon: suffix,

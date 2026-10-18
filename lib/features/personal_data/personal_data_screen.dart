@@ -142,7 +142,6 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: tr('Nama lengkap'),
-                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.white,
                 ),
@@ -158,7 +157,6 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
                 child: InputDecorator(
                   decoration: InputDecoration(
                     labelText: tr('Tanggal lahir'),
-                    border: const OutlineInputBorder(),
                     filled: true,
                     fillColor: Colors.white,
                     suffixIcon: const Icon(Icons.calendar_today_outlined, size: 20),
@@ -210,7 +208,6 @@ class _DataDiriScreenState extends State<DataDiriScreen> {
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   labelText: tr('No. HP (tidak wajib)'),
-                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.white,
                 ),

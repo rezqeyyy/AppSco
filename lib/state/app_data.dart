@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../data/models/personal_data.dart';
 import '../data/models/screening_record.dart';
@@ -20,6 +21,8 @@ class AppData extends ChangeNotifier {
   static const String _keyOnboarding = 'tutorial_selesai';
   static const String _keyAuthMode = 'mode_masuk';
   static const String _keyPersonal = 'data_diri'; // salinan data diri di HP
+  static const String _keyAvatar = 'avatar_lokal'; // foto profil pilihan pengguna (file di HP)
+  static const String _avatarBucket = 'avatars';
 
   bool loaded = false;
   String name = '';
@@ -32,9 +35,22 @@ class AppData extends ChangeNotifier {
   PersonalData? personal;
 
   bool syncing = false; // riwayat sedang disamakan dengan database akun
+  String? syncError; // pesan kalau sinkron terakhir gagal (ditampilkan di tab Riwayat)
+  int get unsyncedCount =>
+      records.where((ScreeningRecord r) => !r.synced && (r.ownerId == null || r.ownerId == account?.id)).length;
   bool _syncAgain = false;
 
   bool get isSignedIn => account != null;
+
+  String? avatarPath; // foto profil yang dipilih sendiri; null = pakai foto akun / email
+  int avatarVersion = 0; // naik setiap foto berganti, supaya gambar lama tidak tertahan di cache
+
+  File? get avatarFile {
+    final String? p = avatarPath;
+    if (p == null || p.isEmpty) return null;
+    final File f = File(p);
+    return f.existsSync() ? f : null;
+  }
 
   Future<void> load() async {
     try {
@@ -42,6 +58,7 @@ class AppData extends ChangeNotifier {
       name = prefs.getString(_keyName) ?? '';
       onboardingDone = prefs.getBool(_keyOnboarding) ?? false;
       authMode = prefs.getString(_keyAuthMode);
+      avatarPath = prefs.getString(_keyAvatar);
       try {
         await AuthService.instance.init();
       } catch (_) {
@@ -72,7 +89,10 @@ class AppData extends ChangeNotifier {
     }
     loaded = true;
     notifyListeners();
-    if (account != null) unawaited(syncHistory());
+    if (account != null) {
+      unawaited(syncHistory());
+      unawaited(_restoreAvatar());
+    }
   }
 
   static dynamic _decode(String? raw) {
@@ -116,6 +136,7 @@ class AppData extends ChangeNotifier {
     await _saveString(_keyPersonal, null);
     await refreshPersonalData();
     unawaited(syncHistory());
+    unawaited(_restoreAvatar());
   }
 
   /// Ambil data diri terbaru dari Supabase. Kalau offline, pakai salinan di HP.
@@ -141,6 +162,15 @@ class AppData extends ChangeNotifier {
     authMode = 'guest';
     account = null;
     personal = null;
+    // Foto profil akun tersimpan di server; hapus salinannya di HP.
+    if (oldId != null && avatarFile != null) {
+      try {
+        await avatarFile!.delete();
+      } catch (_) {}
+      avatarPath = null;
+      avatarVersion++;
+      await _saveString(_keyAvatar, null);
+    }
     if (oldId != null) {
       final List<ScreeningRecord> mine =
           records.where((ScreeningRecord r) => r.ownerId == oldId && r.synced).toList();
@@ -241,6 +271,7 @@ class AppData extends ChangeNotifier {
       return;
     }
     syncing = true;
+    syncError = null;
     notifyListeners();
     try {
       // 1) Unggah yang belum tersimpan.
@@ -251,8 +282,8 @@ class AppData extends ChangeNotifier {
           await ScreeningCloud.upsert(current.id, r);
           r.ownerId = current.id;
           r.synced = true;
-        } catch (_) {
-          // Coba lagi lain kali.
+        } catch (e) {
+          syncError ??= ScreeningCloud.explain(e); // tampilkan error pertama, coba lagi lain kali
         }
       }
       await _saveHistory();
@@ -300,8 +331,8 @@ class AppData extends ChangeNotifier {
         }
       }
       await _saveHistory();
-    } catch (_) {
-      // Offline atau server bermasalah: riwayat di HP tetap dipakai.
+    } catch (e) {
+      syncError ??= ScreeningCloud.explain(e); // riwayat di HP tetap dipakai
     } finally {
       syncing = false;
       notifyListeners();
@@ -309,6 +340,88 @@ class AppData extends ChangeNotifier {
     if (_syncAgain) {
       _syncAgain = false;
       unawaited(syncHistory());
+    }
+  }
+
+  /// Pakai foto pilihan pengguna sebagai foto profil. Disalin ke folder aplikasi,
+  /// lalu (kalau masuk akun) diunggah supaya ikut muncul di HP lain.
+  Future<void> setAvatar(File source) async {
+    final Directory dir = await getApplicationDocumentsDirectory();
+    final File copy = await source.copy('${dir.path}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    final File? old = avatarFile;
+    avatarPath = copy.path;
+    avatarVersion++;
+    notifyListeners();
+    await _saveString(_keyAvatar, copy.path);
+    if (old != null) {
+      try {
+        await old.delete();
+      } catch (_) {}
+    }
+    final UserAccount? current = account;
+    if (current != null) {
+      try {
+        await AuthService.instance.client.storage.from(_avatarBucket).upload(
+              '${current.id}/avatar.jpg',
+              copy,
+              fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+            );
+      } catch (_) {
+        // Gagal unggah: foto tetap dipakai di HP ini.
+      }
+    }
+  }
+
+  /// Kembali ke foto akun Google / foto dari email (Gravatar) / inisial nama.
+  Future<void> removeAvatar() async {
+    final File? old = avatarFile;
+    avatarPath = null;
+    avatarVersion++;
+    notifyListeners();
+    await _saveString(_keyAvatar, null);
+    if (old != null) {
+      try {
+        await old.delete();
+      } catch (_) {}
+    }
+    final UserAccount? current = account;
+    if (current != null) {
+      try {
+        await AuthService.instance.client.storage.from(_avatarBucket).remove(<String>['${current.id}/avatar.jpg']);
+      } catch (_) {}
+    }
+  }
+
+  /// Ambil foto profil dari akun kalau di HP ini belum ada (misalnya HP baru).
+  Future<void> _restoreAvatar() async {
+    final UserAccount? current = account;
+    if (current == null) return;
+    final File? local = avatarFile;
+    if (local != null) {
+      // Foto dipilih saat masih tamu: simpan ke akun.
+      try {
+        await AuthService.instance.client.storage.from(_avatarBucket).upload(
+              '${current.id}/avatar.jpg',
+              local,
+              fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+            );
+      } catch (_) {}
+      return;
+    }
+    try {
+      final Uint8List bytes = await AuthService.instance.client.storage
+          .from(_avatarBucket)
+          .download('${current.id}/avatar.jpg');
+      if (account?.id != current.id || bytes.isEmpty) return;
+      final Directory dir = await getApplicationDocumentsDirectory();
+      final File file = File('${dir.path}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await file.writeAsBytes(bytes, flush: true);
+      avatarPath = file.path;
+      avatarVersion++;
+      notifyListeners();
+      await _saveString(_keyAvatar, file.path);
+    } catch (_) {
+      // Belum pernah memilih foto, atau offline.
     }
   }
 

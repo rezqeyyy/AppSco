@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart' hide Text;
+import 'package:flutter/material.dart';
 
+import '../i18n/app_language.dart';
 import '../theme/app_colors.dart';
 
 class CircleIconButton extends StatelessWidget {
@@ -19,25 +20,29 @@ class CircleIconButton extends StatelessWidget {
   final VoidCallback? onTap;
   final Color background;
   final Color foreground;
-  final bool bordered;
+  final bool bordered; // true: bayangan lembut (tombol di atas latar terang)
   final double size;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: label,
-      child: Material(
-        color: background,
-        shape: CircleBorder(
-          side: bordered ? const BorderSide(color: AppColors.line) : BorderSide.none,
+      message: tr(label),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: bordered && background == Colors.white ? AppColors.softShadow : null,
         ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Icon(icon, size: 24, color: foreground),
+        child: Material(
+          color: background,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: Icon(icon, size: 22, color: foreground),
+            ),
           ),
         ),
       ),

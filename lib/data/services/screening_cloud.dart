@@ -31,6 +31,25 @@ class ScreeningCloud {
 
   static SupabaseClient get _db => AuthService.instance.client;
 
+  /// Pesan yang bisa dipahami untuk error sinkron, beserta detail aslinya.
+  static String explain(Object e) {
+    final String raw = e.toString();
+    final String low = raw.toLowerCase();
+    if (low.contains('bucket not found')) {
+      return 'Tempat foto di server belum dibuat. Jalankan supabase_riwayat.sql di Supabase. ($raw)';
+    }
+    if (low.contains('client_id') || low.contains('photo_path') || low.contains('42703') || low.contains('42p10')) {
+      return 'Tabel riwayat di server belum diperbarui. Jalankan supabase_riwayat.sql di Supabase. ($raw)';
+    }
+    if (low.contains('row-level security') || low.contains('42501') || low.contains('unauthorized') || low.contains('403')) {
+      return 'Server menolak menyimpan (izin RLS). Jalankan ulang supabase_riwayat.sql. ($raw)';
+    }
+    if (e is SocketException || low.contains('socketexception') || low.contains('timeout') || low.contains('failed host lookup')) {
+      return 'Tidak ada koneksi ke server. Riwayat akan dikirim otomatis saat online.';
+    }
+    return 'Riwayat gagal disimpan ke akun: $raw';
+  }
+
   static String photoPathFor(String userId, String clientId) => '$userId/$clientId.jpg';
 
   /// Unggah foto (kalau ada) lalu simpan/perbarui barisnya. Aman diulang (upsert).

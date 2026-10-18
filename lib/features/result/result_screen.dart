@@ -42,6 +42,8 @@ class _HasilScreenState extends State<HasilScreen> {
   bool _saving = false;
   bool _saved = false;
 
+  double _aspect = photoAspect; // lebar / tinggi foto, untuk menghitung sudut garis tulang belakang
+
   bool get _needsReferral {
     final dynamic score = widget.result['risk_score'];
     return score is num && score > referralThreshold;
@@ -50,6 +52,15 @@ class _HasilScreenState extends State<HasilScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Ukuran asli foto (dibaca sekali) supaya sudut di "Detail angka" sesuai foto.
+    FileImage(widget.image).resolve(ImageConfiguration.empty).addListener(
+      ImageStreamListener((ImageInfo info, bool _) {
+        final double a = info.image.width / info.image.height;
+        if (mounted && a.isFinite && a > 0) setState(() => _aspect = a);
+      }, onError: (Object _, StackTrace? __) {}),
+    );
+
     // Hasil baru dengan skor di atas 60%: langsung tawarkan alur rujukan.
     if (widget.record == null && _needsReferral) {
       WidgetsBinding.instance.addPostFrameCallback((Duration _) => _promptReferral());
@@ -431,7 +442,7 @@ class _HasilScreenState extends State<HasilScreen> {
   // "Yang terlihat di foto": temuan dalam bahasa sehari-hari.
   List<Widget> _buildFindings(Map<String, dynamic> result) {
     final List<PlainFinding> items = <PlainFinding>[
-      ...postureFindings(result['posture_features']),
+      ...postureFindings(result['posture_features'], metrics: _metrics(result)),
       photoReliability(result),
     ];
     return <Widget>[
@@ -516,11 +527,22 @@ class _HasilScreenState extends State<HasilScreen> {
   }
 
   // Angka-angka mentah untuk dokter atau tenaga kesehatan, disembunyikan secara bawaan.
+    SpineMetrics? _metrics(Map<String, dynamic> result) =>
+      spineMetrics(parseKeypoints(result['keypoints']), aspect: _aspect);
+
   Widget _buildTechnicalDetail(Map<String, dynamic> result) {
     final dynamic raw = result['posture_features'];
-    final List<FeatureInfo> items = <FeatureInfo>[];
+    final SpineMetrics? m = _metrics(result);
+    // Bentuk tulang belakang dari garis biru di foto; ukuran lain (misalnya kemiringan bahu) dari server.
+    const Set<String> fromPhoto = <String>{
+      'curve_angle_deg', 'lateral_dev_max_abs', 'lateral_dev_range', 'trunk_lean_deg',
+    };
+    final List<FeatureInfo> items = <FeatureInfo>[
+      if (m != null) ...describeSpineMetrics(m.maxDeviation, m.deviationRange, m.curveDeg, m.leanDeg, m.bulgeSide),
+    ];
     if (raw is Map) {
       raw.forEach((dynamic key, dynamic value) {
+        if (m != null && fromPhoto.contains(key.toString())) return;
         items.add(describeFeature(key.toString(), value));
       });
     }

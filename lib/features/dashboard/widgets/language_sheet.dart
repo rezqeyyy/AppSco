@@ -1,5 +1,3 @@
-//lib\features\dashboard\widgets\language_sheet.dart
-
 import 'package:flutter/material.dart' hide Text;
 
 import '../../../core/i18n/app_language.dart';
@@ -19,9 +17,11 @@ class LanguageButton extends StatelessWidget {
       builder: (BuildContext context, Widget? child) {
         return Tooltip(
           message: tr('Ganti bahasa'),
-          child: Material(
+          child: DecoratedBox(
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), boxShadow: AppColors.softShadow),
+            child: Material(
             color: Colors.white,
-            shape: const StadiumBorder(side: BorderSide(color: AppColors.line)),
+            shape: const StadiumBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: appLanguage.downloading ? null : () => showLanguageSheet(context),
@@ -51,6 +51,7 @@ class LanguageButton extends StatelessWidget {
                 ),
               ),
             ),
+          ),
           ),
         );
       },

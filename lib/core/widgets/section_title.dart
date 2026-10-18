@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Text;
-import '../i18n/tr_text.dart';
 
+import '../i18n/tr_text.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
 
 class SectionTitle extends StatelessWidget {
@@ -10,6 +11,9 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: ts(15, weight: FontWeight.w700, height: 20));
+    return Text(
+      text,
+      style: ts(17, weight: FontWeight.w800, color: AppColors.ink, height: 22, letterSpacing: -0.2),
+    );
   }
 }
